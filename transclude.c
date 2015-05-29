@@ -21,25 +21,31 @@
 #include <windows.h>
 #endif
 
+#if defined(__WIN32)
+/*
+	Windows POSIX treats forward and backward slashes equal for compatibility reasons,
+	we do the same so that file transclusions written with forward slashes work cross-platform
+ */
+const char sep[] = "\\/";
+bool is_sep(char c) { return c == '\\' || c == '/'; }
+#else
+const char sep[] = "/";
+bool is_sep(char c) { return c == '/'; }
+#endif
 
 /* Combine directory and filename to create a full path */
 char * path_from_dir_base(char *dir, char *base) {
-#if defined(__WIN32)
-	char sep = '\\';
-#else
-	char sep = '/';
-#endif
 	GString *path = NULL;
 	char *result;
 
-	if ((base != NULL) && (base[0] == sep)) {
+	if ((base != NULL) && (is_sep(base[0]))) {
 		path = g_string_new(base);
 	} else {
 		path = g_string_new(dir);
 
 		/* Ensure that folder ends in "/" */
-		if (!(path->str[strlen(path->str)-1] == sep) ) {
-			g_string_append_c(path, sep);
+		if (!(is_sep(path->str[strlen(path->str)-1])) ) {
+			g_string_append_c(path, *sep);
 		}
 
 		g_string_append_printf(path, "%s", base);
@@ -55,11 +61,6 @@ char * path_from_dir_base(char *dir, char *base) {
 /* See http://stackoverflow.com/questions/1575278/function-to-split-a-filepath-into-path-and-file */
 void split_path_file(char** dir, char** file, char *path) {
     char *slash = path, *next;
-#if defined(__WIN32)
-	const char sep[] = "\\";
-#else
-	const char sep[] = "/";
-#endif
 
     while ((next = strpbrk(slash + 1, sep))) slash = next;
     if (path != slash) slash++;
@@ -160,13 +161,7 @@ void transclude_source(GString *source, char *basedir, char *stack, int output_f
 			strncpy(real,start+2,stop-start-2);
 			real[stop-start-2] = '\0';
 
-#if defined(__WIN32)
-			char sep = '\\';
-#else
-			char sep = '/';
-#endif
-
-			if (real[0] == sep) {
+			if (is_sep(real[0])) {
 				filename = g_string_new(real);
 			} else {
 				filename = g_string_new(folder->str);
